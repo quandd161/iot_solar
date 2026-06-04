@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Solar MQTT Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ════════════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════ -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-sun">☀</div>
+      <div class="brand-text">
+        <h1>Smart Solar</h1>
+        <span>solar_node01</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Giám sát</div>
+
+      <button class="nav-item active" data-tab="overview">
+        <span class="nav-icon">📊</span>
+        Tổng quan
+      </button>
+
+      <button class="nav-item" data-tab="analytics">
+        <span class="nav-icon">📈</span>
+        Phân tích
+      </button>
+
+      <div class="nav-section-label">Quản lý</div>
+
+      <button class="nav-item" data-tab="control">
+        <span class="nav-icon">🎛️</span>
+        Điều khiển
+      </button>
+
+      <button class="nav-item" data-tab="alerts">
+        <span class="nav-icon">⚠️</span>
+        Cảnh báo
+        <span class="nav-badge badge hidden alert-badge">0</span>
+      </button>
+
+      <div class="nav-section-label">Hệ thống</div>
+
+      <button class="nav-item" data-tab="device">
+        <span class="nav-icon">🔧</span>
+        Thiết bị
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div style="color:var(--text-muted);font-size:11px">ESP32 Arduino Core 2.0.14</div>
+      <div>Node: <span class="node-id">solar_node01</span></div>
+      <div class="footer-indicator">
+        <span id="load-indicator" class="indicator-dot" style="background:var(--ok);box-shadow:0 0 7px var(--ok)"></span>
+        <span>Tải đang hoạt động</span>
+      </div>
+      <div class="footer-indicator">
+        <span id="mode-indicator" class="indicator-dot" style="background:var(--sky);box-shadow:0 0 7px var(--sky)"></span>
+        <span id="mode-label">Chế độ: Tự động</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════════════════
+       TOP BAR
+  ════════════════════════════════════════════ -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <span id="page-title" style="font-size:15px;font-weight:600">Tổng quan hệ thống</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-stat">
+        <span class="label">Công suất:</span>
+        <span class="value" id="hdr-power">— W</span>
+      </div>
+      <div class="topbar-stat">
+        <span class="label">Trạng thái:</span>
+        <span class="value status-badge ok" id="hdr-status">NORMAL</span>
+      </div>
+      <div class="topbar-stat">
+        <span class="label">Mẫu #</span>
+        <span class="value" id="hdr-n">0</span>
+      </div>
+      <div class="topbar-stat">
+        <span class="label">Lúc:</span>
+        <span class="value" id="hdr-ts">—</span>
+      </div>
+      <div class="online-badge">
+        <div class="pulse-dot"></div>
+        Online
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════
+       CONTENT
+  ════════════════════════════════════════════ -->
+  <main id="content">
+
+    <!-- ══════════════════════════════════════════
+         TAB 1: TỔNG QUAN
+    ══════════════════════════════════════════ -->
+    <div id="tab-overview" class="tab-panel active">
+
+      <!-- KPI Row -->
+      <div class="grid-4">
+
+        <div class="kpi-card ok" id="kpi-card-temp">
+          <div class="kpi-icon orange">🌡️</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Nhiệt độ DS18B20</div>
+            <div class="kpi-value"><span id="kpi-temp">—</span><span class="kpi-unit">°C</span></div>
+            <div class="kpi-sub">1-Wire sensor</div>
+          </div>
+        </div>
+
+        <div class="kpi-card ok" id="kpi-card-voltage">
+          <div class="kpi-icon solar">⚡</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Điện áp bus</div>
+            <div class="kpi-value"><span id="kpi-voltage">—</span><span class="kpi-unit">V</span></div>
+            <div class="kpi-sub">INA219 bus voltage</div>
+          </div>
+        </div>
+
+        <div class="kpi-card ok" id="kpi-card-current">
+          <div class="kpi-icon blue">🔌</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Dòng điện</div>
+            <div class="kpi-value"><span id="kpi-current">—</span><span class="kpi-unit">mA</span></div>
+            <div class="kpi-sub">INA219 shunt current</div>
+          </div>
+        </div>
+
+        <div class="kpi-card ok" id="kpi-card-power">
+          <div class="kpi-icon green">💡</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Công suất</div>
+            <div class="kpi-value"><span id="kpi-power">—</span><span class="kpi-unit">mW</span></div>
+            <div class="kpi-sub">INA219 power</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Gauges + Power Chart -->
+      <div class="grid-cols-2-3">
+
+        <!-- Gauges panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-icon">⚡</span>
+              INA219 — Thời gian thực
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="gauge-panel">
+              <canvas id="g-voltage" width="130" height="90" style="width:130px;height:90px"></canvas>
+              <div class="gauge-readout text-solar"><span id="v-voltage">—</span><span class="kpi-unit">V</span></div>
+              <div class="gauge-label">Điện áp</div>
+              <div class="gauge-range">0 – 16 V</div>
+            </div>
+            <div class="gauge-panel">
+              <canvas id="g-current" width="130" height="90" style="width:130px;height:90px"></canvas>
+              <div class="gauge-readout text-blue"><span id="v-current">—</span><span class="kpi-unit">mA</span></div>
+              <div class="gauge-label">Dòng điện</div>
+              <div class="gauge-range">0 – 1000 mA</div>
+            </div>
+            <div class="gauge-panel">
+              <canvas id="g-power" width="130" height="90" style="width:130px;height:90px"></canvas>
+              <div class="gauge-readout text-orange"><span id="v-power">—</span><span class="kpi-unit">mW</span></div>
+              <div class="gauge-label">Công suất</div>
+              <div class="gauge-range">0 – 15000 mW</div>
+            </div>
+          </div>
+
+          <!-- Temperature card below gauges -->
+          <div style="margin-top:4px">
+            <div class="kpi-card ok" id="kpi-card-temp-gauge" style="padding:12px 14px">
+              <div class="kpi-icon orange" style="width:32px;height:32px;font-size:15px">🌡️</div>
+              <div class="kpi-body">
+                <div class="kpi-label">Nhiệt độ DS18B20</div>
+                <div class="kpi-value" style="font-size:18px"><span id="kpi-temp-gauge">—</span><span class="kpi-unit">°C</span></div>
+                <div class="kpi-sub" id="kpi-temp-limit-hint">Ngưỡng tắt: — °C</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Power Chart -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-icon">📈</span>
+              Xu hướng công suất (mW)
+              <span class="panel-subtitle">60 mẫu gần nhất (~5 phút)</span>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:280px">
+            <canvas id="chart-power"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live data feed table — matches firmware publishMqttData() JSON -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-icon">📋</span>
+            Dữ liệu thô — JSON payload MQTT
+          </div>
+          <span class="topic-chip">solar/node01/data</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Thông số</th><th>Key JSON</th><th>Giá trị</th><th>Đơn vị</th><th>Mô tả</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Nhiệt độ</td>      <td><code>temp</code></td>       <td class="text-orange" id="lf-temp">—</td>    <td>°C</td>  <td>DS18B20 (−100 = lỗi cảm biến)</td></tr>
+            <tr><td>Điện áp bus</td>   <td><code>voltage</code></td>    <td class="text-solar"  id="lf-voltage">—</td> <td>V</td>   <td>INA219 getBusVoltage_V()</td></tr>
+            <tr><td>Dòng điện</td>     <td><code>current_mA</code></td> <td class="text-blue"   id="lf-current">—</td> <td>mA</td>  <td>INA219 getCurrent_mA()</td></tr>
+            <tr><td>Công suất</td>     <td><code>power_mW</code></td>   <td class="text-green"  id="lf-power">—</td>   <td>mW</td>  <td>INA219 getPower_mW()</td></tr>
+            <tr><td>Trạng thái tải</td><td><code>load</code></td>       <td id="lf-load">—</td>                        <td>bool</td><td>MOSFET load on/off</td></tr>
+            <tr><td>Chế độ</td>        <td><code>auto</code></td>       <td id="lf-auto">—</td>                        <td>bool</td><td>Tự động / Thủ công</td></tr>
+            <tr><td>Ngưỡng tắt</td>    <td><code>tempOff</code></td>    <td id="lf-tempOff">—</td>                     <td>°C</td>  <td>Tắt tải khi temp ≥ tempOff</td></tr>
+            <tr><td>Ngưỡng bật</td>    <td><code>tempOn</code></td>     <td id="lf-tempOn">—</td>                      <td>°C</td>  <td>Bật tải khi temp ≤ tempOn</td></tr>
+            <tr><td>Trạng thái</td>    <td><code>status</code></td>     <td id="lf-status">—</td>                      <td>string</td><td>NORMAL / OVER_TEMP / SENSOR_ERROR</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /tab-overview -->
+
+
+    <!-- ══════════════════════════════════════════
+         TAB 2: PHÂN TÍCH
+    ══════════════════════════════════════════ -->
+    <div id="tab-analytics" class="tab-panel">
+
+      <!-- Summary stats -->
+      <div class="grid-4">
+        <div class="kpi-card ok">
+          <div class="kpi-icon solar">⚡</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Công suất hiện tại</div>
+            <div class="kpi-value"><span id="an-power-cur">—</span><span class="kpi-unit">mW</span></div>
+          </div>
+        </div>
+        <div class="kpi-card ok">
+          <div class="kpi-icon blue">🔋</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Điện áp hiện tại</div>
+            <div class="kpi-value"><span id="an-voltage-cur">—</span><span class="kpi-unit">V</span></div>
+          </div>
+        </div>
+        <div class="kpi-card ok">
+          <div class="kpi-icon green">🔌</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Dòng hiện tại</div>
+            <div class="kpi-value"><span id="an-current-cur">—</span><span class="kpi-unit">mA</span></div>
+          </div>
+        </div>
+        <div class="kpi-card ok">
+          <div class="kpi-icon orange">🌡️</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Nhiệt độ hiện tại</div>
+            <div class="kpi-value"><span id="an-temp-cur">—</span><span class="kpi-unit">°C</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Power + Voltage charts -->
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">💡</span>Công suất (mW)</div>
+          </div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="chart-power2"></canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">⚡</span>Điện áp bus (V)</div>
+          </div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="chart-volt"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current + Temperature charts -->
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">🔌</span>Dòng điện (mA)</div>
+          </div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="chart-current"></canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">🌡️</span>Nhiệt độ DS18B20 (°C)</div>
+          </div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="chart-temp"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-analytics -->
+
+
+    <!-- ══════════════════════════════════════════
+         TAB 3: ĐIỀU KHIỂN
+    ══════════════════════════════════════════ -->
+    <div id="tab-control" class="tab-panel">
+
+      <div class="grid-cols-3-2">
+
+        <!-- Left: Load + Auto control -->
+        <div style="display:flex;flex-direction:column;gap:var(--gap)">
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-icon">🔌</span>Điều khiển tải (Load)</div>
+            </div>
+
+            <!-- Auto mode toggle -->
+            <button class="ctrl-big-btn active auto-btn auto-toggle-btn" onclick="toggleAuto()">
+              CHẾ ĐỘ: TỰ ĐỘNG
+            </button>
+
+            <!-- Manual load toggle (visible in manual mode) -->
+            <button class="ctrl-big-btn active load-toggle-btn" onclick="toggleLoad()" style="margin-top:8px">
+              TẮT TẢI
+            </button>
+
+            <div class="info-list" style="margin-top:12px">
+              <div class="info-row">
+                <span class="info-key">Chế độ điều khiển</span>
+                <span class="info-value" id="ctrl-mode-display">
+                  <span class="tag blue">TỰ ĐỘNG</span>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Trạng thái hệ thống</span>
+                <span class="info-value">
+                  <span class="tag ok" id="ctrl-status">BÌNH THƯỜNG</span>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Nhiệt độ hiện tại</span>
+                <span class="info-value"><span id="ctrl-temp">—</span> °C</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Ngưỡng tắt tải (tempOff)</span>
+                <span class="info-value"><span id="ctrl-tempOff">—</span> °C</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Ngưỡng bật lại (tempOn)</span>
+                <span class="info-value"><span id="ctrl-tempOn">—</span> °C</span>
+              </div>
+            </div>
+
+            <div class="infobox" style="margin-top:4px">
+              📡 Topic MQTT: <span class="topic-chip">solar/node01/cmd</span><br>
+              <code>{"auto":true}</code> — chuyển sang tự động<br>
+              <code>{"auto":false}</code> — chuyển sang thủ công<br>
+              <code>{"load":true}</code> / <code>{"load":false}</code> — bật/tắt tải thủ công
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Temperature thresholds -->
+        <div style="display:flex;flex-direction:column;gap:var(--gap)">
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-icon">🌡️</span>Ngưỡng nhiệt độ bảo vệ</div>
+            </div>
+
+            <div class="info-list">
+              <div class="info-row">
+                <span class="info-key">Ngưỡng tắt tải (tempOff)</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input class="thresh-input" id="thresh-tempOff" type="number" value="35" min="25" max="80" step="0.5">
+                  <span class="info-value">°C</span>
+                </div>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Ngưỡng bật lại (tempOn)</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input class="thresh-input" id="thresh-tempOn" type="number" value="30" min="20" max="75" step="0.5">
+                  <span class="info-value">°C</span>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="applyThresholds()" class="apply-btn" style="margin-top:4px">
+              Áp dụng ngưỡng
+            </button>
+
+            <div class="infobox">
+              📡 Lệnh đổi ngưỡng qua MQTT:<br>
+              <code>{"tempOff":35}</code> → tắt tải khi temp ≥ 35°C<br>
+              <code>{"tempOn":30}</code> → bật tải khi temp ≤ 30°C<br>
+              <em>tempOn phải nhỏ hơn tempOff ít nhất 1°C</em>
+            </div>
+          </div>
+
+          <!-- Logic explanation -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-icon">⚙️</span>Logic điều khiển tự động</div>
+            </div>
+            <div class="info-list">
+              <div class="info-row">
+                <span class="info-key">Lỗi cảm biến (temp &lt; -100)</span>
+                <span class="info-value"><span class="tag crit">Tắt tải ngay</span></span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">temp ≥ tempOff</span>
+                <span class="info-value"><span class="tag crit">Tắt tải (OVER_TEMP)</span></span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">temp ≤ tempOn</span>
+                <span class="info-value"><span class="tag ok">Bật lại tải</span></span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">tempOn &lt; temp &lt; tempOff</span>
+                <span class="info-value"><span class="tag info">Giữ trạng thái cũ</span></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div><!-- /tab-control -->
+
+
+    <!-- ══════════════════════════════════════════
+         TAB 4: CẢNH BÁO
+    ══════════════════════════════════════════ -->
+    <div id="tab-alerts" class="tab-panel">
+
+      <div class="grid-cols-3-2">
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-icon">⚠️</span>
+              Nhật ký cảnh báo
+              <span class="badge hidden alert-badge">0</span>
+            </div>
+            <button onclick="Alerts.clearUnread()" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-secondary);padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+              Đánh dấu đã đọc
+            </button>
+          </div>
+          <div class="alert-list alert-list-target">
+            <div class="alert-empty">Chưa có cảnh báo nào</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--gap)">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-icon">🛡️</span>Loại cảnh báo firmware</div>
+            </div>
+            <div class="info-list">
+              <div class="info-row">
+                <span class="info-key"><span class="tag crit">SENSOR_ERROR</span></span>
+                <span class="info-value">DS18B20 đọc lỗi — tắt tải</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key"><span class="tag crit">OVER_TEMP</span></span>
+                <span class="info-value">Nhiệt độ ≥ tempOff — tắt tải</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key"><span class="tag warn">TEMP_WARN</span></span>
+                <span class="info-value">Nhiệt độ gần ngưỡng tắt</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key"><span class="tag info">LOAD_ON/OFF</span></span>
+                <span class="info-value">Thao tác bật/tắt tải</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-icon">📡</span>Alert MQTT payload</div>
+            </div>
+            <div class="infobox">
+              Topic: <span class="topic-chip">solar/node01/alert</span><br>
+              <code style="display:inline-block;margin-top:6px;color:var(--rose);background:rgba(248,113,113,0.07);border-color:rgba(248,113,113,0.2)">{<br>
+              &nbsp;"dev":"solar_node01",<br>
+              &nbsp;"ts":1234567,<br>
+              &nbsp;"temp":42.5,<br>
+              &nbsp;"load":false,<br>
+              &nbsp;"type":"OVER_TEMP",<br>
+              &nbsp;"message":"Temperature too high"<br>
+              }</code>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /tab-alerts -->
+
+
+    <!-- ══════════════════════════════════════════
+         TAB 5: THÔNG TIN THIẾT BỊ
+    ══════════════════════════════════════════ -->
+    <div id="tab-device" class="tab-panel">
+
+      <div class="grid-2">
+
+        <!-- ESP32 + Firmware info -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">🔧</span>Thông tin phần cứng</div>
+          </div>
+          <div class="info-list">
+            <div class="info-row"><span class="info-key">Vi điều khiển</span>   <span class="info-value">ESP32 Dev Module</span></div>
+            <div class="info-row"><span class="info-key">CPU Frequency</span>   <span class="info-value">240 MHz (dual-core)</span></div>
+            <div class="info-row"><span class="info-key">Flash Size</span>       <span class="info-value">4 MB</span></div>
+            <div class="info-row"><span class="info-key">Arduino Core</span>     <span class="info-value">ESP32 v2.0.14</span></div>
+            <div class="info-row"><span class="info-key">I2C (SDA/SCL)</span>   <span class="info-value">GPIO21 / GPIO22</span></div>
+            <div class="info-row"><span class="info-key">MOSFET Pin</span>       <span class="info-value">MOSFET_PIN (điều khiển tải)</span></div>
+            <div class="info-row"><span class="info-key">Serial Baud</span>      <span class="info-value">115200</span></div>
+          </div>
+        </div>
+
+        <!-- MQTT / Network -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">📡</span>Kết nối & MQTT</div>
+          </div>
+          <div class="info-list">
+            <div class="info-row"><span class="info-key">Client ID</span>        <span class="info-value">solar_node01-&lt;MAC&gt;</span></div>
+            <div class="info-row"><span class="info-key">MQTT Broker</span>      <span class="info-value">MQTT_BROKER:1883</span></div>
+            <div class="info-row"><span class="info-key">Protocol</span>         <span class="info-value">MQTT v3.1.1</span></div>
+            <div class="info-row"><span class="info-key">Will Topic</span>       <span class="info-value">solar/node01/status</span></div>
+            <div class="info-row"><span class="info-key">Will payload</span>     <span class="info-value"><code>{"online":false}</code></span></div>
+            <div class="info-row"><span class="info-key">Buffer size</span>      <span class="info-value">512 bytes</span></div>
+            <div class="info-row"><span class="info-key">MQTT gửi mỗi</span>    <span class="info-value">5 giây</span></div>
+            <div class="info-row"><span class="info-key">WiFi reconnect</span>  <span class="info-value">10 giây</span></div>
+            <div class="info-row"><span class="info-key">MQTT reconnect</span>  <span class="info-value">5 giây</span></div>
+          </div>
+        </div>
+
+        <!-- Sensor & library info -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">📚</span>Cảm biến & Thư viện</div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Thư viện</th><th>Version</th><th>Chức năng</th></tr></thead>
+            <tbody>
+              <tr><td>Adafruit INA219</td>  <td>1.2.3</td>  <td>Đo dòng/áp/công suất I²C</td></tr>
+              <tr><td>DallasTemperature</td><td>3.9.1</td>  <td>Đọc DS18B20 nhiệt độ</td></tr>
+              <tr><td>OneWire</td>          <td>2.3.7</td>  <td>Bus 1-Wire cho DS18B20</td></tr>
+              <tr><td>Adafruit SSD1306</td> <td>2.5.7</td>  <td>Hiển thị OLED 128×64</td></tr>
+              <tr><td>PubSubClient</td>     <td>2.8.0</td>  <td>MQTT client</td></tr>
+              <tr><td>ArduinoJson</td>      <td>6.21.3</td> <td>Serialize/parse JSON</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Topic list matching firmware -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">📂</span>Cấu trúc Topic MQTT</div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Topic</th><th>Chiều</th><th>Nội dung</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="topic-chip">solar/node01/data</span></td>
+                <td><span class="tag info">Pub</span></td>
+                <td>temp, voltage, current_mA, power_mW, load, auto, tempOff, tempOn, status</td>
+              </tr>
+              <tr>
+                <td><span class="topic-chip">solar/node01/alert</span></td>
+                <td><span class="tag info">Pub</span></td>
+                <td>dev, ts, temp, load, type, message</td>
+              </tr>
+              <tr>
+                <td><span class="topic-chip">solar/node01/status</span></td>
+                <td><span class="tag info">Pub</span></td>
+                <td>{"online":true/false} — will message</td>
+              </tr>
+              <tr>
+                <td><span class="topic-chip">solar/node01/cmd</span></td>
+                <td><span class="tag purple">Sub</span></td>
+                <td>{"auto":bool}, {"load":bool}, {"tempOff":float}, {"tempOn":float}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div><!-- /tab-device -->
+
+  </main><!-- /content -->
+
+</div><!-- /app -->
+
+<!-- ── SCRIPTS (order matters) ──────────────────────────── -->
+<script src="assets/js/alerts.js"></script>
+<script src="assets/js/gauge.js"></script>
+<script src="assets/js/sim.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/app.js"></script>
+
+<script>
+  /* Analytics tab: wire chart-power2 to the same shared buffer */
+  window.addEventListener('DOMContentLoaded', () => {
+    const el2 = document.getElementById('chart-power2');
+    if (el2 && typeof Chart !== 'undefined') {
+      window._chart2 = new Chart(el2.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: chartBuf.labels,
+          datasets: [{
+            label: 'Công suất (mW)',
+            data:  chartBuf.power_mW,
+            borderColor:     '#f6a623',
+            backgroundColor: 'rgba(246,166,35,0.10)',
+            borderWidth: 2.5, pointRadius: 0, tension: 0.4, fill: true,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          interaction: { mode:'index', intersect:false },
+          plugins: {
+            legend: { labels: { color:'#a8b8cc', usePointStyle:true, font:{ size:12 }, padding:16 } },
+            tooltip: { backgroundColor:'#1c2333', borderColor:'#30404f', borderWidth:1,
+              titleColor:'#a8b8cc', bodyColor:'#f0f4f8', padding:10, cornerRadius:8 },
+          },
+          scales: {
+            x: { grid:{ color:'rgba(48,64,79,0.6)' }, ticks:{ color:'#6b829a', maxTicksLimit:8, maxRotation:0, font:{ size:10 } }, border:{ display:false } },
+            y: { min:0, suggestedMax:15000,
+                 grid:{ color:'rgba(48,64,79,0.6)' }, border:{ display:false },
+                 ticks:{ color:'#6b829a', callback: v => v + ' mW', font:{ size:10 } } },
+          },
+        },
+      });
+
+      const _orig = pushChartData;
+      window.pushChartData = function(d) {
+        _orig(d);
+        window._chart2 && window._chart2.update('none');
+      };
+    }
+
+    /* Sync temperature hint label */
+    const origUpdateUI = window.updateUI;
+    /* Patch gauge card to show temp and threshold */
+    setInterval(() => {
+      const hintEl = document.getElementById('kpi-temp-limit-hint');
+      const gaugeVal = document.getElementById('kpi-temp-gauge');
+      if (hintEl && typeof sim !== 'undefined') {
+        hintEl.textContent = `Ngưỡng tắt: ${sim.tempOff}°C | Bật: ${sim.tempOn}°C`;
+        if (gaugeVal) {
+          gaugeVal.textContent = sim.temp < -100 ? 'ERR' : sim.temp.toFixed(1);
+        }
+        const card = document.getElementById('kpi-card-temp-gauge');
+        if (card) {
+          card.classList.remove('ok','warn','crit');
+          card.classList.add(sim.temp < -100 ? 'crit'
+            : sim.temp >= sim.tempOff ? 'crit'
+            : sim.temp >= sim.tempOff - 3 ? 'warn' : 'ok');
+        }
+      }
+    }, 1000);
+
+    /* Sync mode display text */
+    setInterval(() => {
+      const modeEl = document.getElementById('ctrl-mode-display');
+      if (modeEl && typeof sim !== 'undefined') {
+        modeEl.innerHTML = sim.auto
+          ? '<span class="tag blue">TỰ ĐỘNG</span>'
+          : '<span class="tag warn">THỦ CÔNG</span>';
+      }
+      const modeIndicatorText = document.querySelector('.sidebar-footer span:last-child');
+      const modeIndicator = document.getElementById('mode-indicator');
+      if (modeIndicator && typeof sim !== 'undefined') {
+        modeIndicator.style.background = sim.auto ? 'var(--sky)' : 'var(--amber)';
+        modeIndicator.style.boxShadow  = sim.auto ? '0 0 7px var(--sky)' : '0 0 7px var(--amber)';
+      }
+    }, 500);
+  });
+</script>
+
+</body>
+</html>
