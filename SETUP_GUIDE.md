@@ -146,13 +146,13 @@ Mở file `.ino` của firmware, tìm và sửa các hằng số cấu hình:
 
 ```cpp
 // ── WiFi ──────────────────────────────────────
-#define WIFI_SSID     "TEN_WIFI_CUA_BAN"
-#define WIFI_PASSWORD "MAT_KHAU_WIFI"
+#define WIFI_SSID     "Trai đẹp Thọ Xuân"
+#define WIFI_PASSWORD "97530237"
 
 // ── MQTT ──────────────────────────────────────
 // IP máy tính đang chạy Mosquitto
 // Tìm IP bằng cách: mở cmd → gõ ipconfig → xem IPv4
-#define MQTT_BROKER   "192.168.1.XXX"
+#define MQTT_BROKER   "192.168.0.100"
 #define MQTT_PORT     1883
 #define MQTT_CLIENT_ID "solar_node01"
 
@@ -168,8 +168,8 @@ Mở file `.ino` của firmware, tìm và sửa các hằng số cấu hình:
 #define OLED_ADDRESS  0x3C
 
 // ── Ngưỡng nhiệt độ mặc định ──────────────────
-float tempOffLimit = 35.0;   // Tắt tải khi temp >= 35°C
-float tempOnLimit  = 30.0;   // Bật lại khi temp <= 30°C
+float tempOffLimit = 30.0;   // Tắt tải khi temp >= 35°C
+float tempOnLimit  = 29.9;   // Bật lại khi temp <= 30°C
 
 // ── Thời gian gửi MQTT ─────────────────────────
 #define MQTT_SEND_MS  5000   // Gửi mỗi 5 giây

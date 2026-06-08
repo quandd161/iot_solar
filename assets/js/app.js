@@ -147,6 +147,10 @@ function _updateControlPanel(d) {
 
 /* ── LOAD TOGGLE (manual) ────────────────────────────────── */
 function toggleLoad() {
+  if (typeof mqttSetLoad === 'function' && typeof mqttConnected !== 'undefined' && mqttConnected) {
+    mqttSetLoad(!sim.load);
+    return;
+  }
   sim.auto = false;
   sim.load = !sim.load;
   if (!sim.load) {
@@ -159,6 +163,10 @@ function toggleLoad() {
 
 /* ── AUTO MODE TOGGLE ────────────────────────────────────── */
 function toggleAuto() {
+  if (typeof mqttSetAuto === 'function' && typeof mqttConnected !== 'undefined' && mqttConnected) {
+    mqttSetAuto(!sim.auto);
+    return;
+  }
   sim.auto = !sim.auto;
   _updateControlPanel(sim);
 }
@@ -191,6 +199,9 @@ function applyThresholds() {
 
   sim.tempOff = newOff;
   sim.tempOn  = newOn;
+  if (typeof mqttSetThresholds === 'function' && typeof mqttConnected !== 'undefined' && mqttConnected) {
+    mqttSetThresholds(newOff, newOn);
+  }
 
   offInput.style.borderColor = 'var(--ok)';
   onInput.style.borderColor  = 'var(--ok)';
@@ -221,5 +232,22 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  startSimulation(updateUI);
+  const startSim = () => startSimulation(updateUI);
+  if (typeof connectMqtt === 'function') {
+    connectMqtt(
+      data => {
+        Object.assign(sim, data);
+        updateUI(sim);
+      },
+      alert => {
+        if (alert && alert.type) Alerts.push(alert.type, alert.message);
+      },
+      status => {
+        if (status) console.log('[MQTT] Status:', status);
+      },
+      startSim
+    );
+  } else {
+    startSim();
+  }
 });
